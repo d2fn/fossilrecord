@@ -29,7 +29,7 @@ void setup() {
 
 void placeObjects() {
   for(int i = 0; i < speciesList.length; i++) {
-    speciesList[i].placeAt(25,25+i*speciesList[i].height());  
+    speciesList[i].placeAt(10,25+i*speciesList[i].height());  
   }
 }
 
