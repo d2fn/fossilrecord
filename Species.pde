@@ -30,6 +30,9 @@ class Species {
     if(habitatChars.length() > 0) {
       this.habitat = String.valueOf(habitatChars.charAt(0));
     }
+    else {
+      this.habitat = "z";
+    }
     
     for(int i = 0; i < presence.length; i++) {
       presence[i] = false;
@@ -40,6 +43,10 @@ class Species {
         }
       }
     }
+  }
+
+  boolean isFoundInPeriod(int periodIndex) {
+    return presence[periodIndex];
   }
 
   color getColorForHabitat() {
@@ -70,9 +77,9 @@ class Species {
   }
 
   color getTextColor() {
-    if(selectedSpecies != null && selectedSpecies.habitat.equals(this.habitat)) {
-      return getColorForHabitat();
-    }
+//    if(selectedSpecies != null && selectedSpecies.habitat.equals(this.habitat)) {
+//      return getColorForHabitat();
+//    }
     return color(50,50,50);
   }
 
@@ -80,54 +87,36 @@ class Species {
     bounds(x,y,width,y+2);
   }
 
-  boolean draw() {
+  void draw() {
     update();
     
-    // put a gray background behind the species the mouse is over
-    boolean mouseOver = contains(mouseX,mouseY);
-    if(mouseOver) {
-      selectedSpecies = this;
-//      fill(220,220,220);
-//      noStroke();
-//      rect(x1,y(),width,height());
+    int drawY = drawY();
+    
+    if(nav.outOfRange(drawY)) {
+      return;
     }
     
     // draw very small text on the left
     textFont(fonts[1],2);
     fill(getTextColor());
     textAlign(LEFT,CENTER);
-    text(family,x1,y());
+    text(family,x1,drawY);
     
     // draw the time bounds of the fossil records for this species in habitat appropriate color
-    stroke(getColorForHabitat());
+    color habitatColor = getColorForHabitat();
     for(int i = 0; i < presence.length; i++) {
-      int x0 = 55 + i*4;
-      int xf = x0 + 4;
+      int x0 = 55 + i*3;
+      int xf = x0 + 2;
       if(presence[i]) {
-        line(x0,y(),xf,y());
-      }
-      if(!renderedPeriod && mouseX > x0 && mouseX <= xf) {
-        renderedPeriod = true;
-        pushStyle();
-        fill(50,50,50);
-        textFont(fonts[7],12);
-        textAlign(CENTER,CENTER);
-        text(periodLabels[i],x0+2,10);
-        // show the label for this fossil period
-        stroke(220,220,220);
-        line(x0+2,25,x0+2,height-25);
-        popStyle();
+        if(i != selectedPeriodIndex && selectedPeriodIndex > -1) {
+          stroke(180,180,180);
+        }
+        else {
+          stroke(habitatColor);
+        }
+        line(x0,drawY,xf,drawY);
       }
     }
-    
-    // draw a larger label if the mouse is over this guy
-    if(mouseOver) {
-      textFont(fonts[7],12);
-      fill(50,50,50);
-      text(toString(), mouseX > 45 ? 45 : mouseX, mouseY);
-    }
-    
-    return mouseOver;
   }
   
   int getIndexOfFirstAppearance() {
@@ -137,6 +126,15 @@ class Species {
       }
     }
     return presence.length;
+  }
+
+  int getIndexOfLastAppearance() {
+    for(int i = presence.length-1; i >= 0; i--) {
+      if(presence[i]) {
+        return i;
+      }
+    }
+    return 0;
   }
   
   void update() {
@@ -151,8 +149,12 @@ class Species {
     return Math.round(y1.value);
   }
   
+  int drawY() {
+    return y() - yOffset;
+  }
+  
   boolean contains(int x, int y) {
-    return x > x1 && x < x2 && y > y() && y <= (y() + height());
+    return x > x1 && x < x2 && y > drawY() && y <= (drawY() + height());
   }
   
   void bounds(int x1, int y1, int x2, int y2) {
