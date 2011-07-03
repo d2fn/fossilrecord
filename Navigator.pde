@@ -4,6 +4,9 @@ class Navigator {
   int visibley1, visibley2;
   
   boolean navigating = false;
+  int navigationOffset = 0;
+  
+  int visibleRange = getPlotHeight() / getRowHeight();
   
   Navigator(int x1, int y1, int x2, int y2) {
     this.x1 = x1;
@@ -28,6 +31,20 @@ class Navigator {
       }
       index++;
     }
+    
+    int yrange1 = getThumbnailLocation(speciesIndexOffset,speciesList.length);
+    int yrange2 = getThumbnailLocation(speciesIndexOffset + visibleRange,speciesList.length);
+    int midy = (yrange1 + yrange2)/2;
+    
+    pushStyle();
+    noFill();
+    stroke(0,0,0,100);
+    beginShape();
+    vertex(x2+2,yrange1);
+    bezierVertex(x2+6,yrange1,x2,midy,x2+6,midy);
+    bezierVertex(x2,midy,x2+6,yrange2,x2+2,yrange2);
+    endShape();
+    popStyle();
   }
   
   boolean contains(int x, int y) {
@@ -36,6 +53,10 @@ class Navigator {
   
   boolean inRange(int drawY) {
     return !outOfRange(drawY);
+  }
+  
+  int width() {
+    return x2 - x1;
   }
   
   boolean outOfRange(int drawY) {
@@ -53,6 +74,13 @@ class Navigator {
   void beginNav(int numSpecies) {
     if(contains(mouseX,mouseY)) {
       navigating = true;
+      int selectedIndex = getSpeciesIndex(mouseY,numSpecies);
+      if(selectedIndex > speciesIndexOffset && (selectedIndex-speciesIndexOffset) <= visibleRange) {
+        navigationOffset = speciesIndexOffset - getSpeciesIndex(mouseY,numSpecies);        
+      }
+      else {
+        navigationOffset = -visibleRange/2;
+      }
       continueNav(numSpecies);
     }
   }
@@ -61,7 +89,13 @@ class Navigator {
     if(navigating()) {
       int index = getSpeciesIndex(mouseY,numSpecies);
       if(index >= 0 && index < numSpecies) {
-        speciesIndexOffset = index;
+        speciesIndexOffset = index + navigationOffset;
+        if(speciesIndexOffset < 0) {
+          speciesIndexOffset = 0;
+        }
+        else if(speciesIndexOffset >= numSpecies) {
+          speciesIndexOffset = numSpecies - 1;
+        }
       }
     }
   }

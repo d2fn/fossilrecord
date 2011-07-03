@@ -53,6 +53,14 @@ class Integrator {
     target = t;
   }
  
+  boolean stable() {
+    float epsilon = abs(target-value);
+    if(epsilon < 0.003) {
+      return true;
+    }
+    println("epsilon = " + epsilon);
+    return false;
+  }
  
   void noTarget() {
     targeting = false;

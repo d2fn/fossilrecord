@@ -88,7 +88,6 @@ class Species {
   }
 
   void draw() {
-    update();
     
     int drawY = drawY();
     
@@ -105,10 +104,10 @@ class Species {
     // draw the time bounds of the fossil records for this species in habitat appropriate color
     color habitatColor = getColorForHabitat();
     for(int i = 0; i < presence.length; i++) {
-      int x0 = 55 + i*3;
-      int xf = x0 + 2;
+      int x0 = x1 + 55 + i*getPeriodWidth();
+      int xf = x0 + getPeriodWidth();
       if(presence[i]) {
-        if(i != selectedPeriodIndex && selectedPeriodIndex > -1) {
+        if(i > selectedPeriodIndex && selectedPeriodIndex > -1) {
           stroke(180,180,180);
         }
         else {
@@ -137,8 +136,16 @@ class Species {
     return 0;
   }
   
+  int getDuration() {
+    return getIndexOfLastAppearance() - getIndexOfFirstAppearance();
+  }
+  
   void update() {
     y1.update();
+  }
+  
+  boolean stable() {
+    return y1.stable();
   }
   
   int height() {
