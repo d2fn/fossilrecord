@@ -58,7 +58,6 @@ class Integrator {
     if(epsilon < 0.003) {
       return true;
     }
-    println("epsilon = " + epsilon);
     return false;
   }
  

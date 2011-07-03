@@ -5,7 +5,7 @@ class Species {
   public String family;
   public String kingdom;
   public String phylum;
-  public String other;
+  public String className;
   
 //F Freshwater
 //M Marine
@@ -21,10 +21,10 @@ class Species {
   public Integrator y1 = new Integrator();
   
   Species(String[] fields) {
-    this.family   = fields[0];
-    this.kingdom  = fields[1];
-    this.phylum   = fields[2];
-    this.other    = fields[3];
+    this.family     = fields[0];
+    this.kingdom    = fields[1];
+    this.phylum     = fields[2];
+    this.className  = fields[3];
     
     String habitatChars = fields[4];
     if(habitatChars.length() > 0) {
@@ -87,7 +87,7 @@ class Species {
     bounds(x,y,width,y+2);
   }
 
-  void draw() {
+  void draw(boolean selected) {
     
     int drawY = drawY();
     
@@ -102,16 +102,21 @@ class Species {
     text(family,x1,drawY);
     
     // draw the time bounds of the fossil records for this species in habitat appropriate color
-    color habitatColor = getColorForHabitat();
+    color barColor = selected ? color(0,0,0) : getColorForHabitat();
     for(int i = 0; i < presence.length; i++) {
       int x0 = x1 + 55 + i*getPeriodWidth();
       int xf = x0 + getPeriodWidth();
       if(presence[i]) {
         if(i > selectedPeriodIndex && selectedPeriodIndex > -1) {
-          stroke(180,180,180);
+          if(selected) {
+            stroke(0,0,0,80);
+          }
+          else {
+            stroke(0,0,0,50);
+          }
         }
         else {
-          stroke(habitatColor);
+          stroke(barColor);
         }
         line(x0,drawY,xf,drawY);
       }
@@ -172,7 +177,11 @@ class Species {
   }
   
   String toString() {
-    return family + " : " + kingdom + " : " + phylum;
+    String s = phylum + " : " + kingdom + " : " + family;
+    if(className.length() > 0) {
+      s = className + " : " + s;
+    }
+    return s;
   }
   
   // period labels

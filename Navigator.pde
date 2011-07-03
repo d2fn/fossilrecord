@@ -15,10 +15,10 @@ class Navigator {
     this.y2 = y2;
   }
   
-  void draw(Species[] speciesList) {
+  void draw(List<Species> speciesList) {
     int index = 0;
     for(Species s : speciesList) {
-      int thumbnailY = getThumbnailLocation(index,speciesList.length);
+      int thumbnailY = getThumbnailLocation(index,speciesList.size());
       int drawY = s.drawY();
       if(selectedPeriodIndex == -1 || s.isFoundInPeriod(selectedPeriodIndex)) {
         stroke(s.getColorForHabitat());
@@ -32,19 +32,21 @@ class Navigator {
       index++;
     }
     
-    int yrange1 = getThumbnailLocation(speciesIndexOffset,speciesList.length);
-    int yrange2 = getThumbnailLocation(speciesIndexOffset + visibleRange,speciesList.length);
-    int midy = (yrange1 + yrange2)/2;
-    
-    pushStyle();
-    noFill();
-    stroke(0,0,0,100);
-    beginShape();
-    vertex(x2+2,yrange1);
-    bezierVertex(x2+6,yrange1,x2,midy,x2+6,midy);
-    bezierVertex(x2,midy,x2+6,yrange2,x2+2,yrange2);
-    endShape();
-    popStyle();
+    if(speciesList.size() > y2 - y1) {
+      int yrange1 = getThumbnailLocation(speciesIndexOffset,speciesList.size());
+      int yrange2 = getThumbnailLocation(speciesIndexOffset + visibleRange,speciesList.size());
+      int midy = (yrange1 + yrange2)/2;
+      
+      pushStyle();
+      noFill();
+      stroke(0,0,0,100);
+      beginShape();
+      vertex(x2+2,yrange1);
+      bezierVertex(x2+6,yrange1,x2,midy,x2+6,midy);
+      bezierVertex(x2,midy,x2+6,yrange2,x2+2,yrange2);
+      endShape();
+      popStyle();
+    }
   }
   
   boolean contains(int x, int y) {
@@ -64,6 +66,9 @@ class Navigator {
   }
   
   int getThumbnailLocation(int index, int numSpecies) {
+    if(numSpecies < y2 - y1) {
+      return y1 + index;
+    }
     return round(map(index,0,numSpecies-1,y1,y2));
   }
   

@@ -2,15 +2,21 @@ import processing.opengl.*;
 
 PFont[] fonts;
 Species[] speciesList;
+List<Species> visibleSpecies;
 Species selectedSpecies;
 Navigator nav;
 
 int selectedPeriodIndex = -1;
 
+// current species index and the index at the last frame
+int pspeciesIndexOffset = 0;
 int speciesIndexOffset = 0;
+
 int yOffset;
 
-int leftMargin = 300;
+int topMargin = 25;
+int leftMargin = 450;
+int bottomMargin = 10;
 int leftNavBuffer = 150;
 
 // set to true during rendering to avoid multiple period label paintings
@@ -19,12 +25,16 @@ boolean renderedPeriod = false;
 int thumbnailx1;
 int thumbnailx2;
 
+List<ArrowLabel> speciesLabels = new ArrayList<ArrowLabel>(5);
+
+String searchTerm = "";
+String psearchTerm = "";
+
 int getPlotHeight() {
-  return height - 10 - 25;
+  return height - bottomMargin - topMargin;
 }
 
 void setup() {
-  
   // setup size
   size(leftMargin+getPeriodWidth()*periodLabels.length + leftNavBuffer + 15, 900);
   smooth();
@@ -32,7 +42,7 @@ void setup() {
   thumbnailx1 = width - 45;
   thumbnailx2 = width - 30;
 
-  nav = new Navigator(thumbnailx1, 25, thumbnailx2, height - 10);
+  nav = new Navigator(thumbnailx1, topMargin, thumbnailx2, height - 10);
 
   // setup fonts
   fonts = new PFont[8];
@@ -49,18 +59,22 @@ void setup() {
     String[] fields = line.split(",");
     speciesList[i] = new Species(fields);
   }
-  placeObjects();
+  
+  visibleSpecies = new ArrayList<Species>(speciesList.length);
+  clearSearch();
 
   int totalPixelHeight = speciesList.length * speciesList[0].height();
-  screenHeight = height-25;
+  screenHeight = height-topMargin-bottomMargin;
   float numPages = totalPixelHeight / screenHeight;
   println("numPages = " + numPages);
 }
 
 
 void placeObjects() {
-  for (int i = 0; i < speciesList.length; i++) {
-    speciesList[i].placeAt(leftMargin, 25+i*getRowHeight());
+  int i = 0;
+  for(Species s : visibleSpecies) {
+    s.placeAt(leftMargin, topMargin+i*getRowHeight());
+    i++;
   }
 }
 
@@ -70,113 +84,179 @@ boolean update() {
     s.update();
     stable = stable && s.stable();
   }
-  println("stable = " + stable);
   return stable;
 }
 
 void draw() {
   
-  if(update() && pmouseX == mouseX && pmouseY == mouseY) {
+  if(update() && pmouseX == mouseX && pmouseY == mouseY && pspeciesIndexOffset == speciesIndexOffset && psearchTerm.equals(searchTerm)) {
     noLoop();
-    return;
   }
-
-  background(255);
-  fill(50);
-  renderedPeriod = false;
-  int index = 0;
-
-  nav.draw(speciesList);
-
-  yOffset = speciesList[speciesIndexOffset].y();
-
-  for (int i = speciesIndexOffset; i < speciesList.length; i++) {
-    Species s = speciesList[i];
-    s.draw();
-    if (s.contains(mouseX, mouseY)) {
-      selectedSpecies = s;
+  else {
+    background(255);
+    fill(50);
+    renderedPeriod = false;
+    int index = 0;
+  
+    if(searchTerm.length() > 0) {
+      pushStyle();
+      textFont(fonts[7], 12);
+      textAlign(RIGHT,BOTTOM);
+      text("searching: " + searchTerm,leftMargin-5,topMargin-5);
+      popStyle();
     }
-  }
-
-  for (int i = speciesIndexOffset; i < speciesList.length; i++) {
-    Species s = speciesList[i];
-    int drawY = s.drawY();
-    int thumbnailY = nav.getThumbnailLocation(i, speciesList.length);
-    if (nav.inRange(drawY)) {
-      // draw the curve from the rightmost era, unless a period is selected,
-      // then draw from that period, connecting the right-hand nav to the
-      // particular species at the given era
-      int drawFromPeriodIndex = periodLabels.length - 1;
-      if (selectedPeriodIndex != -1) {
-        drawFromPeriodIndex = selectedPeriodIndex;
+  
+    if(visibleSpecies.isEmpty()) {
+      return;
+    }
+  
+    nav.draw(visibleSpecies);
+  
+    yOffset = visibleSpecies.get(speciesIndexOffset).y() - topMargin;
+  
+    for(Species s : visibleSpecies) {
+      if (s.contains(mouseX, mouseY)) {
+        selectedSpecies = s;
+        s.draw(true);
       }
-      // only draw the connecting line if the species has fossil records from the selected period
-      if (s.isFoundInPeriod(drawFromPeriodIndex)) {
-        stroke(s.getColorForHabitat());
-        int startX = getPeriodX(drawFromPeriodIndex) + getPeriodWidth();
-        int endX  = nav.x1;
-        float cx1 = startX + max(50, 0.3*(endX - startX));
-        float cy1 = drawY;
-        float cx2 = endX - 50;//0.2*(endX - startX);
-        float cy2 = thumbnailY;
-
-        noFill();
-        beginShape();
-        vertex(startX, drawY);
-        bezierVertex(cx1, cy1, cx2, cy2, endX, thumbnailY);
-        endShape();
+      else {
+        s.draw(false);
       }
     }
+  
+    for (int i = speciesIndexOffset; i < visibleSpecies.size(); i++) {
+      Species s = visibleSpecies.get(i);
+      int drawY = s.drawY();
+      int thumbnailY = nav.getThumbnailLocation(i, visibleSpecies.size());
+      if (nav.inRange(drawY)) {
+        // draw the curve from the rightmost era, unless a period is selected,
+        // then draw from that period, connecting the right-hand nav to the
+        // particular species at the given era
+        int drawFromPeriodIndex = periodLabels.length - 1;
+        if (selectedPeriodIndex != -1) {
+          drawFromPeriodIndex = selectedPeriodIndex;
+        }
+        // only draw the connecting line if the species has fossil records from the selected period
+        if (s.isFoundInPeriod(drawFromPeriodIndex) && selectedPeriodIndex != -1) {
+          color lineColor = s == selectedSpecies ? color(0,0,0) : s.getColorForHabitat();
+          stroke(lineColor);
+          int startX = getPeriodX(drawFromPeriodIndex) + getPeriodWidth();
+          int endX  = nav.x1;
+          float cx1 = startX + max(50, 0.3*(endX - startX));
+          float cy1 = drawY;
+          float cx2 = endX - 50;//0.2*(endX - startX);
+          float cy2 = thumbnailY;
+  
+          noFill();
+          beginShape();
+          vertex(startX, drawY);
+          bezierVertex(cx1, cy1, cx2, cy2, endX, thumbnailY);
+          endShape();
+        }
+      }
+    }
+  
+//  public String family;
+//  public String kingdom;
+//  public String phylum;
+//  public String className;
+    speciesLabels.clear();
+    if(selectedSpecies != null) {
+      pushStyle();
+      textFont(fonts[7],12);
+      fill(254,244,156,150);
+      stroke(0,0,0,50);
+      int pointToX = selectedSpecies.x1-2;
+      int pointToY = selectedSpecies.drawY();
+      color lblColor = color(0,0,0,220);
+      color hvrColor = color(6,69,230);
+      speciesLabels =
+        arrowLabels(
+          pointToX,pointToY,
+          lblColor,hvrColor,
+          selectedSpecies.family,
+          selectedSpecies.kingdom,
+          selectedSpecies.phylum,
+          selectedSpecies.className);
+      for(ArrowLabel a : speciesLabels) {
+        a.draw();
+      }
+      popStyle();
+    }
+  
+    if (selectedPeriodIndex != -1) {
+      pushStyle();
+      fill(50, 50, 50);
+      textFont(fonts[7], 12);
+      textAlign(CENTER, CENTER);
+      int x = getPeriodX(selectedPeriodIndex) + round(getPeriodWidth()/2);
+      String label = getPeriodLabel(selectedPeriodIndex);
+      text(label, x, 10);
+      // show the label for this fossil period
+      stroke(220, 220, 220);
+      line(x, topMargin, x, height-bottomMargin);
+      popStyle();
+    }
   }
-
-  if (selectedSpecies != null) {
-    pushStyle();
-    textFont(fonts[7], 12);
-    textAlign(LEFT, BOTTOM);
-    String label = selectedSpecies.toString();
-    int textX = mouseX > 45 ? 45 : mouseX;
-    int textY = mouseY;
-    int boxHeight = round(textAscent())+4;
-    int boxWidth = round(textWidth(label));
-    fill(255, 255, 255, 130);
-    noStroke();
-    rect(textX-2, textY-boxHeight, boxWidth+4, boxHeight);
-    fill(50, 50, 50);
-    text(label, textX, textY);
-    popStyle();
-  }
-
-  if (selectedPeriodIndex != -1) {
-    pushStyle();
-    fill(50, 50, 50);
-    textFont(fonts[7], 12);
-    textAlign(CENTER, CENTER);
-    int x = getPeriodX(selectedPeriodIndex) + round(getPeriodWidth()/2);
-    String label = getPeriodLabel(selectedPeriodIndex);
-    text(label, x, 10);
-    // show the label for this fossil period
-    stroke(220, 220, 220);
-    line(x, 25, x, height-10);
-    popStyle();
-  }
+  
+  pspeciesIndexOffset = speciesIndexOffset;
+  psearchTerm = searchTerm;
 }
 
-void sortByFirstAppearance() {
-  Arrays.sort(speciesList, new Comparator<Species>() {
-    public int compare(Species s1, Species s2) {
-      int c = s1.getIndexOfFirstAppearance() - s2.getIndexOfFirstAppearance();
-      if (c == 0) {
-        c = s2.getIndexOfLastAppearance() - s1.getIndexOfLastAppearance();
-      }
-      return c;
+List<ArrowLabel> arrowLabels(int pointToX, int pointToY, color lblColor, color hvrColor, String ... labels) {
+  List<ArrowLabel> arrowLabels = new ArrayList<ArrowLabel>(labels.length);
+  for(String label : labels) {
+    ArrowLabel lbl = new ArrowLabel(label,lblColor,hvrColor,pointToX,pointToY,5,7);
+    arrowLabels.add(lbl);
+    pointToX = lbl.x+2;
+  }
+  return arrowLabels;
+}
+
+void searchFor(String search) {
+  searchTerm = search.toLowerCase();
+  speciesIndexOffset = 0;
+  List<Species> filtered = new ArrayList(speciesList.length);
+  for(Species s : speciesList) {
+    if(s.toString().toLowerCase().indexOf(searchTerm) != -1) {
+      filtered.add(s);
     }
   }
-  );
+  visibleSpecies = filtered;
   placeObjects();
 }
 
+void clearSearch() {
+  searchTerm = "";
+  speciesIndexOffset = 0;
+  visibleSpecies.clear();
+  for(Species s : speciesList) {
+    visibleSpecies.add(s);
+  }
+  placeObjects();
+}
+
+void sortSpecies(Comparator<Species> comparator) {
+  Collections.sort(visibleSpecies,comparator);
+  placeObjects();
+}
+
+//void sortByFirstAppearance() {
+//  Collections.sort(visibleSpecies,Species.firstAppearanceComparator());
+////  new Comparator<Species>() {
+////    public int compare(Species s1, Species s2) {
+////      int c = s1.getIndexOfFirstAppearance() - s2.getIndexOfFirstAppearance();
+////      if (c == 0) {
+////        c = s2.getIndexOfLastAppearance() - s1.getIndexOfLastAppearance();
+////      }
+////      return c;
+////    }
+////  });
+//  placeObjects();
+//}
+
 void sortByLastAppearance() {
-  Arrays.sort(speciesList, new Comparator<Species>() {
+  Collections.sort(visibleSpecies, new Comparator<Species>() {
     public int compare(Species s1, Species s2) {
       int c = s1.getIndexOfLastAppearance() - s2.getIndexOfLastAppearance();
       if (c == 0) {
@@ -184,23 +264,37 @@ void sortByLastAppearance() {
       }
       return c;
     }
-  }
-  );
+  });
+  placeObjects();
+}
+
+void sortByClass() {
+  Collections.sort(visibleSpecies, new Comparator<Species>() {
+    public int compare(Species s1, Species s2) {
+      int c = s1.className.compareTo(s2.className);
+      if (c == 0) {
+        c = s1.getIndexOfFirstAppearance() - s2.getIndexOfFirstAppearance();
+        if(c == 0) {
+          c = s1.getIndexOfLastAppearance() - s2.getIndexOfLastAppearance();
+        }
+      }
+      return c;
+    }
+  });
   placeObjects();
 }
 
 void alphaSort() {
-  Arrays.sort(speciesList, new Comparator<Species>() {
+  Collections.sort(visibleSpecies, new Comparator<Species>() {
     public int compare(Species s1, Species s2) {
       return s1.family.compareTo(s2.family);
     }
-  }
-  );
+  });
   placeObjects();
 }
 
 void habitatSort() {
-  Arrays.sort(speciesList, new Comparator<Species>() {
+  Collections.sort(visibleSpecies, new Comparator<Species>() {
     public int compare(Species s1, Species s2) {
       int c = s1.habitat.compareTo(s2.habitat);
       if (c == 0) {
@@ -211,13 +305,12 @@ void habitatSort() {
       }
       return c;
     }
-  }
-  );
+  });
   placeObjects();
 }
 
 void sortByDuration() {
-  Arrays.sort(speciesList, new Comparator<Species>() {
+  Collections.sort(visibleSpecies, new Comparator<Species>() {
     public int compare(Species s1, Species s2) {
       int c = s2.getDuration() - s1.getDuration();
       if (c == 0) {
@@ -228,55 +321,76 @@ void sortByDuration() {
       }
       return c;
     }
-  }
-  );
+  });
   placeObjects();
 }
 
 void keyPressed() {
-  if (key == 's') {
-    sortByFirstAppearance();
-  }
-  else if (key == 'e') {
-    sortByLastAppearance();
-  }
-  else if (key == 'd') {
-    sortByDuration();
-  }
-  else if (key == 'a') {
-    alphaSort();
-  }
-  else if (key == 'h') {
-    habitatSort();
-  }
-  else if (key == '[') {
-    speciesIndexOffset--;
-    if (speciesIndexOffset < 0) {
-      speciesIndexOffset = 0;
+  //if(key == CODED && keyCode = CONTROL) {
+    if (key == 'S') {
+      sortSpecies(Comparators.firstAppearanceComparator());
     }
-  }
-  else if (key == ']') {
-    speciesIndexOffset++;
-  }
+    else if(key == 'C') {
+      sortByClass();
+    }
+    else if (key == 'E') {
+      sortByLastAppearance();
+    }
+    else if (key == 'D') {
+      sortByDuration();
+    }
+    else if (key == 'A') {
+      alphaSort();
+    }
+    else if (key == 'H') {
+      habitatSort();
+    }
+    else if (key == '[') {
+      speciesIndexOffset--;
+      if (speciesIndexOffset < 0) {
+        speciesIndexOffset = 0;
+      }
+    }
+    else if (key == ']') {
+      speciesIndexOffset++;
+    }
+    else if (key == BACKSPACE) {
+      if(searchTerm.length() < 2) {
+        clearSearch();
+      }
+      else {
+        searchFor(searchTerm.substring(0,searchTerm.length() - 1));
+      }
+    }
+    else if (key == '.') {
+      clearSearch();
+    }
+    else if(key != CODED) {
+      searchFor(searchTerm + key);
+    }
+ // }
   loop();
 }
 
 void mouseClicked() {
   selectPeriod(mouseX);
+  ArrowLabel arrowLabel = speciesLabelAt(mouseX,mouseY);
+  if(arrowLabel != null) {
+    link("http://en.wikipedia.org/wiki/" + arrowLabel.label);
+  }
+  selectPeriod(mouseX);
   loop();
 }
 
 void mousePressed() {
-  nav.beginNav(speciesList.length);
-  if (!nav.navigating()) {
-    selectPeriod(mouseX);
-  }
+  nav.beginNav(visibleSpecies.size());
+  selectPeriod(mouseX);
   loop();
 }
 
 void mouseDragged() {
-  nav.continueNav(speciesList.length);
-  if (!nav.navigating()) {
+  nav.continueNav(visibleSpecies.size());
+  if(!nav.navigating()) {
     selectPeriod(mouseX);
   }
   loop();
@@ -287,7 +401,28 @@ void mouseReleased() {
   loop();
 }
 
+ArrowLabel speciesLabelAt(int x, int y) {
+  for(ArrowLabel label : speciesLabels) {
+    if(label.contains(x,y)) {
+      return label;
+    }
+  }
+  return null;
+}
+
 void mouseMoved() {
+  if(nav.contains(mouseX,mouseY)) {
+    cursor(HAND);
+  }
+  else {
+    ArrowLabel label = speciesLabelAt(mouseX,mouseY);
+    if(label != null) {
+      cursor(HAND);
+    }
+    else {
+      cursor(CROSS);
+    }
+  }
   loop();
 }
 
@@ -407,12 +542,19 @@ int getRowHeight() {
 }
 
 void selectPeriod(int xcoord) {
-  int pindex = getPeriodIndex(xcoord);
-  if (pindex >= 0 && pindex < periodLabels.length) {
-    selectedPeriodIndex = pindex;
+  int leftX = leftMargin + 55;
+  int rightX = 55 + leftMargin + periodLabels.length*getPeriodWidth();
+  
+  if(xcoord >= leftX && xcoord <= rightX) {
+    int pindex = getPeriodIndex(xcoord);
+    if (pindex >= 0 && pindex < periodLabels.length) {
+      selectedPeriodIndex = pindex;
+    }
+    else {
+      selectedPeriodIndex = -1;
+    }
   }
-  else {
+  else if(xcoord > rightX && xcoord < rightX+50) {
     selectedPeriodIndex = -1;
   }
 }
-
