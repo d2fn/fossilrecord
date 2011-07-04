@@ -32,7 +32,7 @@ class Navigator {
       index++;
     }
     
-    if(speciesList.size() > y2 - y1) {
+    if(speciesList.size() > visibleRange) {
       int yrange1 = getThumbnailLocation(speciesIndexOffset,speciesList.size());
       int yrange2 = getThumbnailLocation(speciesIndexOffset + visibleRange,speciesList.size());
       int midy = (yrange1 + yrange2)/2;

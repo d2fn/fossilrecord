@@ -238,112 +238,32 @@ void clearSearch() {
 
 void sortSpecies(Comparator<Species> comparator) {
   Collections.sort(visibleSpecies,comparator);
-  placeObjects();
-}
-
-//void sortByFirstAppearance() {
-//  Collections.sort(visibleSpecies,Species.firstAppearanceComparator());
-////  new Comparator<Species>() {
-////    public int compare(Species s1, Species s2) {
-////      int c = s1.getIndexOfFirstAppearance() - s2.getIndexOfFirstAppearance();
-////      if (c == 0) {
-////        c = s2.getIndexOfLastAppearance() - s1.getIndexOfLastAppearance();
-////      }
-////      return c;
-////    }
-////  });
-//  placeObjects();
-//}
-
-void sortByLastAppearance() {
-  Collections.sort(visibleSpecies, new Comparator<Species>() {
-    public int compare(Species s1, Species s2) {
-      int c = s1.getIndexOfLastAppearance() - s2.getIndexOfLastAppearance();
-      if (c == 0) {
-        c = s1.getIndexOfFirstAppearance() - s2.getIndexOfFirstAppearance();
-      }
-      return c;
-    }
-  });
-  placeObjects();
-}
-
-void sortByClass() {
-  Collections.sort(visibleSpecies, new Comparator<Species>() {
-    public int compare(Species s1, Species s2) {
-      int c = s1.className.compareTo(s2.className);
-      if (c == 0) {
-        c = s1.getIndexOfFirstAppearance() - s2.getIndexOfFirstAppearance();
-        if(c == 0) {
-          c = s1.getIndexOfLastAppearance() - s2.getIndexOfLastAppearance();
-        }
-      }
-      return c;
-    }
-  });
-  placeObjects();
-}
-
-void alphaSort() {
-  Collections.sort(visibleSpecies, new Comparator<Species>() {
-    public int compare(Species s1, Species s2) {
-      return s1.family.compareTo(s2.family);
-    }
-  });
-  placeObjects();
-}
-
-void habitatSort() {
-  Collections.sort(visibleSpecies, new Comparator<Species>() {
-    public int compare(Species s1, Species s2) {
-      int c = s1.habitat.compareTo(s2.habitat);
-      if (c == 0) {
-        c = s1.getIndexOfFirstAppearance() - s2.getIndexOfFirstAppearance();
-        if (c == 0) {
-          c = s1.getIndexOfLastAppearance() - s2.getIndexOfLastAppearance();
-        }
-      }
-      return c;
-    }
-  });
-  placeObjects();
-}
-
-void sortByDuration() {
-  Collections.sort(visibleSpecies, new Comparator<Species>() {
-    public int compare(Species s1, Species s2) {
-      int c = s2.getDuration() - s1.getDuration();
-      if (c == 0) {
-        c = s1.getIndexOfFirstAppearance() - s2.getIndexOfFirstAppearance();
-        if (c == 0) {
-          c = s1.toString().compareTo(s2.toString());
-        }
-      }
-      return c;
-    }
-  });
+  Arrays.sort(speciesList,comparator);
   placeObjects();
 }
 
 void keyPressed() {
   //if(key == CODED && keyCode = CONTROL) {
     if (key == 'S') {
-      sortSpecies(Comparators.firstAppearanceComparator());
+      sortSpecies(Comparators.firstAppearance);
     }
     else if(key == 'C') {
-      sortByClass();
+      sortSpecies(Comparators.className);
     }
     else if (key == 'E') {
-      sortByLastAppearance();
+      sortSpecies(Comparators.lastAppearance);
+    }
+    else if (key == 'P') {
+      sortSpecies(Comparators.phylum);
     }
     else if (key == 'D') {
-      sortByDuration();
+      sortSpecies(Comparators.duration);
     }
-    else if (key == 'A') {
-      alphaSort();
+    else if (key == 'F') {
+      sortSpecies(Comparators.family);
     }
     else if (key == 'H') {
-      habitatSort();
+      sortSpecies(Comparators.habitat);
     }
     else if (key == '[') {
       speciesIndexOffset--;
