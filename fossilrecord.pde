@@ -1,6 +1,8 @@
 import processing.opengl.*;
 
 PFont[] fonts;
+PFont helpFont;
+String helpText;
 Species[] speciesList;
 List<Species> visibleSpecies;
 Species selectedSpecies;
@@ -15,9 +17,10 @@ int speciesIndexOffset = 0;
 int yOffset;
 
 int topMargin = 25;
-int leftMargin = 450;
+int leftMargin = 500;
 int bottomMargin = 10;
 int leftNavBuffer = 150;
+int screenHeight;
 
 // set to true during rendering to avoid multiple period label paintings
 boolean renderedPeriod = false;
@@ -30,19 +33,78 @@ List<ArrowLabel> speciesLabels = new ArrayList<ArrowLabel>(5);
 String searchTerm = "";
 String psearchTerm = "";
 
+FieldType habitatField;
+FieldType classField;
+ColorMapper colorMapper;
+ColorSequencer colorSequencer;
+
 int getPlotHeight() {
   return height - bottomMargin - topMargin;
 }
 
 void setup() {
+
+  colorSequencer = new ColorSequencer(
+      color( 15,  59, 160),
+      color( 47, 207, 121),
+      color(255, 102,   0),
+      color(245, 222,   0),
+      color(  0, 170,  80),
+      color(157,  62, 229),
+      color(205,   0,  19));
+
+  habitatField = new FieldType("habitat", colorSequencer);
+  habitatField.map("F", "Freshwater");
+  habitatField.map("M", "Marine");
+  habitatField.map("T", "Terrestrial");
+  habitatField.map("B", "Brackish");
+  habitatField.map("L", "Lagoonal");
+  habitatField.map("V", "Volant");
+  habitatField.map("S", "Littoral");
+
+  colorMapper = new ColorMapper(habitatField);
+
+// F Freshwater
+// M Marine
+// T Terrestrial
+// B Brackish
+// L Lagoonal
+// V Volant
+// S Littoral
+    // if(habitat != null) {
+    //   if(habitat.equals("F")) {
+    //     return color(15,59,160);
+    //   }
+    //   else if(habitat.equals("M")) {
+    //     return color(47,207,121);
+    //   }
+    //   else if(habitat.equals("T")) {
+    //     return color(255,102,0);
+    //   }
+    //   else if(habitat.equals("B")) {
+    //     return color(245,222,0);
+    //   }
+    //   else if(habitat.equals("L")) {
+    //     return color(0,170,80);
+    //   }
+    //   else if(habitat.equals("V")) {
+    //     return color(157,62,229);
+    //   }
+    //   else if(habitat.equals("S")) {
+    //     return color(205,0,119);
+    //   }
+    // }
+
+
   // setup size
-  size(leftMargin+getPeriodWidth()*periodLabels.length + leftNavBuffer + 15, 900);
+  size(leftMargin+getPeriodWidth()*periodLabels.length + leftNavBuffer + 15, 800);
   smooth();
+  frameRate(60);
 
   thumbnailx1 = width - 45;
   thumbnailx2 = width - 30;
 
-  nav = new Navigator(thumbnailx1, topMargin, thumbnailx2, height - 10);
+  nav = new Navigator(colorMapper, thumbnailx1, topMargin, thumbnailx2, height - 10);
 
   // setup fonts
   fonts = new PFont[8];
@@ -50,6 +112,14 @@ void setup() {
     fonts[i] = loadFont("Georgia-"+(i+1)+".vlw");
   }
   textFont(fonts[1], 2);
+  
+  helpFont = loadFont("Courier-12.vlw");
+  String[] helpLines = loadStrings("help.txt");
+  StringBuilder sb = new StringBuilder();
+  for(String line : helpLines) {
+    sb.append(line).append("\n");
+  }
+  helpText = sb.toString();
 
   // read fossil record data
   String[] lines = loadStrings("fr.csv");
@@ -117,10 +187,10 @@ void draw() {
     for(Species s : visibleSpecies) {
       if (s.contains(mouseX, mouseY)) {
         selectedSpecies = s;
-        s.draw(true);
+        s.draw(colorMapper, true);
       }
       else {
-        s.draw(false);
+        s.draw(colorMapper, false);
       }
     }
   
@@ -138,7 +208,7 @@ void draw() {
         }
         // only draw the connecting line if the species has fossil records from the selected period
         if (s.isFoundInPeriod(drawFromPeriodIndex) && selectedPeriodIndex != -1) {
-          color lineColor = s == selectedSpecies ? color(0,0,0) : s.getColorForHabitat();
+          color lineColor = s == selectedSpecies ? color(0,0,0) : colorMapper.getColor(s);
           stroke(lineColor);
           int startX = getPeriodX(drawFromPeriodIndex) + getPeriodWidth();
           int endX  = nav.x1;
@@ -198,6 +268,29 @@ void draw() {
       popStyle();
     }
   }
+  
+  // help
+  pushStyle();
+  fill(50,50,50);
+  textFont(helpFont, 12);
+  textAlign(LEFT,BOTTOM);
+  text(helpText, 15, height-15);
+  popStyle();
+
+  pushStyle();
+  fill(50,50,50);
+  int legendY = 15;
+  for(String key : colorMapper.keys()) {
+    noStroke();
+    fill(colorMapper.getColor(key));
+    rect(15, legendY, 15, 13);
+    fill(50,50,50);
+    textFont(helpFont, 12);
+    textAlign(LEFT, TOP);
+    text(colorMapper.getValue(key), 35, legendY+1);
+    legendY += 15;
+  }
+  popStyle();
   
   pspeciesIndexOffset = speciesIndexOffset;
   psearchTerm = searchTerm;

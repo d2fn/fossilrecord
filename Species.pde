@@ -49,32 +49,42 @@ class Species {
     return presence[periodIndex];
   }
 
-  color getColorForHabitat() {
-    if(habitat != null) {
-      if(habitat.equals("F")) {
-        return color(15,59,160);
-      }
-      else if(habitat.equals("M")) {
-        return color(47,207,121);
-      }
-      else if(habitat.equals("T")) {
-        return color(255,102,0);
-      }
-      else if(habitat.equals("B")) {
-        return color(245,222,0);
-      }
-      else if(habitat.equals("L")) {
-        return color(0,170,80);
-      }
-      else if(habitat.equals("V")) {
-        return color(157,62,229);
-      }
-      else if(habitat.equals("S")) {
-        return color(205,0,119);
-      }
+  String getValue(String key) {
+    if(key.equals("habitat")) {
+      return habitat;
     }
-    return color(50,50,50);
+    if(key.equals("class")) {
+      return className;
+    }
+    return "";
   }
+
+  // color getColorForHabitat() {
+  //   if(habitat != null) {
+  //     if(habitat.equals("F")) {
+  //       return color(15,59,160);
+  //     }
+  //     else if(habitat.equals("M")) {
+  //       return color(47,207,121);
+  //     }
+  //     else if(habitat.equals("T")) {
+  //       return color(255,102,0);
+  //     }
+  //     else if(habitat.equals("B")) {
+  //       return color(245,222,0);
+  //     }
+  //     else if(habitat.equals("L")) {
+  //       return color(0,170,80);
+  //     }
+  //     else if(habitat.equals("V")) {
+  //       return color(157,62,229);
+  //     }
+  //     else if(habitat.equals("S")) {
+  //       return color(205,0,119);
+  //     }
+  //   }
+  //   return color(50,50,50);
+  // }
 
   color getTextColor() {
 //    if(selectedSpecies != null && selectedSpecies.habitat.equals(this.habitat)) {
@@ -87,7 +97,7 @@ class Species {
     bounds(x,y,width,y+2);
   }
 
-  void draw(boolean selected) {
+  void draw(ColorMapper colorMapper, boolean selected) {
     
     int drawY = drawY();
     
@@ -102,12 +112,12 @@ class Species {
     text(family,x1,drawY);
     
     // draw the time bounds of the fossil records for this species in habitat appropriate color
-    color barColor = selected ? color(0,0,0) : getColorForHabitat();
+    color barColor = selected ? color(0,0,0) : colorMapper.getColor(this);
     for(int i = 0; i < presence.length; i++) {
       int x0 = x1 + 55 + i*getPeriodWidth();
       int xf = x0 + getPeriodWidth();
       if(presence[i]) {
-        if(i > selectedPeriodIndex && selectedPeriodIndex > -1) {
+        if(selectedPeriodIndex > -1 && (i > selectedPeriodIndex || !presence[selectedPeriodIndex])) {
           if(selected) {
             stroke(0,0,0,80);
           }

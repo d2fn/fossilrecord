@@ -1,0 +1,12 @@
+begin typing in lowercase to search by species
+
+. - clear search
+S - sort by first appearance date
+E - sort by last appearance date
+D - sort by longievity
+P - sort by Phylum
+C - sort by Class
+F - sort by Family
+H - sort by Habitat
+[ - scroll up
+] - scroll down

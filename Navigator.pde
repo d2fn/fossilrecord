@@ -1,4 +1,6 @@
 class Navigator {
+
+  ColorMapper colorMapper;
   
   int x1, x2, y1, y2;
   int visibley1, visibley2;
@@ -8,7 +10,8 @@ class Navigator {
   
   int visibleRange = getPlotHeight() / getRowHeight();
   
-  Navigator(int x1, int y1, int x2, int y2) {
+  Navigator(ColorMapper colorMapper, int x1, int y1, int x2, int y2) {
+    this.colorMapper = colorMapper;
     this.x1 = x1;
     this.x2 = x2;
     this.y1 = y1;
@@ -21,7 +24,7 @@ class Navigator {
       int thumbnailY = getThumbnailLocation(index,speciesList.size());
       int drawY = s.drawY();
       if(selectedPeriodIndex == -1 || s.isFoundInPeriod(selectedPeriodIndex)) {
-        stroke(s.getColorForHabitat());
+        stroke(colorMapper.getColor(s));
         line(x1,thumbnailY,x2,thumbnailY);
         if(outOfRange(drawY)) {
           // out of range
